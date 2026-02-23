@@ -96,6 +96,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     app = Application.builder().token(TELEGRAM_TOKEN).build()
+    import asyncio
+asyncio.run(app.bot.delete_webhook(drop_pending_updates=True))
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     logger.info("Бот запущен...")
