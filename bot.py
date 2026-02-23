@@ -16,7 +16,6 @@ if not TELEGRAM_TOKEN or not DEEPSEEK_API_KEY:
 SYSTEM_PROMPT = """
 Ты — Артур, свой в доску пацан, который сидит в чате с друзьями.
 Твоя задача — разбавлять обстановку, подкалывать друзей и быть душой компании.
-Ты отвечаешь кратко, по-братски, используешь сленг, иногда материшься, но не зло.
 Ты не робот, а реальный друг.
 Если тебя просят о помощи — помогаешь, но с юмором.
 Ты сам можешь влезть в разговор, если тема зашла.
@@ -30,9 +29,9 @@ SYSTEM_PROMPT = """
 # ----------------------------------------------
 
 # Настройки рандомного поведения
-SELF_INTERVENTION_PROBABILITY = 0.20   # 20% — влезть самому
-REACTION_PROBABILITY = 0.05             # 5% — поставить реакцию
-REACTIONS = ["👍", "🔥", "😂", "🤯", "💩", "👎", "🤡", "❤️"]
+SELF_INTERVENTION_PROBABILITY = 0.20   # 20% – влезть самому (для тестирования, потом уменьшишь)
+REACTION_PROBABILITY = 0.05             # 5% – поставить реакцию
+REACTIONS = ["💩", "🤔", "😞", "😭", "🙂", "🙃", "🙇"]
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -54,7 +53,7 @@ async def generate_response(user_message: str) -> str:
         return response.choices[0].message.content.strip()
     except Exception as e:
         logger.error(f"Ошибка DeepSeek: {e}")
-        return "Братан, я чет завис, повтори позже."
+        return "Братан, я чёт завис, повтори позже."
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Здарова, я Артур! Добавьте меня в группу и общайтесь, я свой.")
@@ -65,10 +64,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message.text:
         return
 
-    chat_id = update.message.chat_id
     user_message = update.message.text
-    message_id = update.message.message_id
 
+    # Рандомная реакция
     if random.random() < REACTION_PROBABILITY:
         try:
             reaction = random.choice(REACTIONS)
@@ -76,6 +74,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
 
+    # Проверяем, упомянут ли бот
     bot_mentioned = False
     if update.message.entities:
         for entity in update.message.entities:
@@ -83,9 +82,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 bot_mentioned = True
                 break
 
+    # Ответ на сообщение бота
     is_reply_to_bot = update.message.reply_to_message and update.message.reply_to_message.from_user.id == context.bot.id
     should_respond = bot_mentioned or is_reply_to_bot
 
+    # Если это группа и никто не просил, может влезем сами
     if not should_respond and update.message.chat.type != "private":
         if random.random() < SELF_INTERVENTION_PROBABILITY:
             should_respond = True
@@ -96,8 +97,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     app = Application.builder().token(TELEGRAM_TOKEN).build()
-    import asyncio
-asyncio.run(app.bot.delete_webhook(drop_pending_updates=True))
+    # Принудительно сбрасываем вебхук, чтобы избежать ошибки 409
+    asyncio.run(app.bot.delete_webhook(drop_pending_updates=True))
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     logger.info("Бот запущен...")
