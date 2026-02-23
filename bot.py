@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import random
 import os
@@ -29,13 +28,14 @@ SYSTEM_PROMPT = """
 # ----------------------------------------------
 
 # Настройки рандомного поведения
-SELF_INTERVENTION_PROBABILITY = 0.20   # 20% – влезть самому (для тестирования, потом уменьшишь)
-REACTION_PROBABILITY = 0.05             # 5% – поставить реакцию
+SELF_INTERVENTION_PROBABILITY = 0.20   # 20% – влезть самому (потом уменьшишь)
+REACTION_PROBABILITY = 0.05            # 5% – поставить реакцию
 REACTIONS = ["💩", "🤔", "😞", "😭", "🙂", "🙃", "🙇"]
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Подключаемся к DeepSeek
 client = AsyncOpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
 
 async def generate_response(user_message: str) -> str:
@@ -96,14 +96,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(answer)
 
 def main():
-    app = Application.builder().token(TELEGRAM_TOKEN).build()
-    # Принудительно сбрасываем вебхук, чтобы избежать ошибки 409
-    asyncio.run(app.bot.delete_webhook(drop_pending_updates=True))
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    logger.info("Бот запущен...")
-    app.run_polling()
+    try:
+        app = Application.builder().token(TELEGRAM_TOKEN).build()
+        app.add_handler(CommandHandler("start", start))
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        logger.info("Бот запущен...")
+        app.run_polling()
+    except Exception as e:
+        logger.error(f"Критическая ошибка: {e}")
 
 if __name__ == "__main__":
     main()
