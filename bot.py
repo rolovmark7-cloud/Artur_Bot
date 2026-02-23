@@ -74,7 +74,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
 
-    # Проверяем, упомянут ли бот
+    # Если это личный чат – отвечаем всегда
+    if update.message.chat.type == "private":
+        answer = await generate_response(user_message)
+        await update.message.reply_text(answer)
+        return
+
+    # Для группы: проверяем, упомянут ли бот
     bot_mentioned = False
     if update.message.entities:
         for entity in update.message.entities:
@@ -86,10 +92,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     is_reply_to_bot = update.message.reply_to_message and update.message.reply_to_message.from_user.id == context.bot.id
     should_respond = bot_mentioned or is_reply_to_bot
 
-    # Если это группа и никто не просил, может влезем сами
-    if not should_respond and update.message.chat.type != "private":
-        if random.random() < SELF_INTERVENTION_PROBABILITY:
-            should_respond = True
+    # Если никто не просил, может влезем сами
+    if not should_respond and random.random() < SELF_INTERVENTION_PROBABILITY:
+        should_respond = True
 
     if should_respond:
         answer = await generate_response(user_message)
