@@ -95,6 +95,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Ответ на сообщение бота
     is_reply_to_bot = update.message.reply_to_message and update.message.reply_to_message.from_user.id == context.bot.id
+    # Отклик на имя "Артур" в тексте
+if "артур" in user_message.lower():
+    bot_mentioned = True
+    logger.info("Упоминание по имени 'Артур'")
     should_respond = bot_mentioned or is_reply_to_bot
 
     # Если никто не просил, может влезем сами
