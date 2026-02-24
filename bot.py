@@ -70,6 +70,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     user_message = update.message.text
+    chat_type = update.message.chat.type
+    logger.info(f"Сообщение в {chat_type}: {user_message}")
 
     # Рандомная реакция
     if random.random() < REACTION_PROBABILITY:
@@ -79,36 +81,46 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
 
-    # Если это личный чат – отвечаем всегда
-    if update.message.chat.type == "private":
+    # Если личный чат – отвечаем всегда
+    if chat_type == "private":
+        logger.info("Личный чат, отвечаем")
         answer = await generate_response(user_message)
         await update.message.reply_text(answer)
         return
 
-    # Для группы: проверяем, упомянут ли бот
+    # Для группы: проверяем упоминание через @
     bot_mentioned = False
     if update.message.entities:
+        logger.info(f"Найдены entities: {[entity.type for entity in update.message.entities]}")
         for entity in update.message.entities:
-            if entity.type == "mention" and entity.get_text(user_message) == f"@{context.bot.username}":
-                bot_mentioned = True
-                break
+            if entity.type == "mention":
+                mention_text = user_message[entity.offset:entity.offset+entity.length]
+                logger.info(f"Упоминание: '{mention_text}', бот ожидает: '@{context.bot.username}'")
+                if mention_text.lower() == f"@{context.bot.username.lower()}":
+                    bot_mentioned = True
+                    logger.info("Упоминание совпало!")
+                    break
 
     # Ответ на сообщение бота
     is_reply_to_bot = update.message.reply_to_message and update.message.reply_to_message.from_user.id == context.bot.id
-    # Отклик на имя "Артур" в тексте
-if "артур" in user_message.lower():
-    bot_mentioned = True
-    logger.info("Упоминание по имени 'Артур'")
+
+    # Отклик на имя "Артур" в тексте (без @)
+    if "артур" in user_message.lower():
+        bot_mentioned = True
+        logger.info("Упоминание по имени 'Артур'")
+
+    logger.info(f"bot_mentioned={bot_mentioned}, is_reply_to_bot={is_reply_to_bot}")
+
     should_respond = bot_mentioned or is_reply_to_bot
 
     # Если никто не просил, может влезем сами
     if not should_respond and random.random() < SELF_INTERVENTION_PROBABILITY:
         should_respond = True
+        logger.info("Самовмешательство!")
 
     if should_respond:
         answer = await generate_response(user_message)
         await update.message.reply_text(answer)
-
 def main():
     try:
         app = Application.builder().token(TELEGRAM_TOKEN).build()
